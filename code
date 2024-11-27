@@ -1,0 +1,187 @@
+-- GUI Library Module
+
+local GUI = {}
+GUI.__index = GUI
+
+-- Create a new GUI system
+function GUI:CreateGUI(guiName)
+    local gui = {}
+    setmetatable(gui, self)
+    
+    -- Create ScreenGui
+    gui.ScreenGui = Instance.new("ScreenGui")
+    gui.ScreenGui.Name = guiName
+    gui.ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+    -- Create Main Frame
+    gui.Frame = Instance.new("Frame")
+    gui.Frame.Size = UDim2.new(0, 400, 0, 300)
+    gui.Frame.Position = UDim2.new(0.5, -200, 0.5, -150)
+    gui.Frame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    gui.Frame.Parent = gui.ScreenGui
+
+    -- Create Title
+    gui.Title = Instance.new("TextLabel")
+    gui.Title.Size = UDim2.new(1, 0, 0, 30)
+    gui.Title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    gui.Title.Text = guiName
+    gui.Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    gui.Title.TextSize = 20
+    gui.Title.Parent = gui.Frame
+
+    -- Create close button
+    gui.CloseButton = Instance.new("TextButton")
+    gui.CloseButton.Size = UDim2.new(0, 30, 0, 30)
+    gui.CloseButton.Position = UDim2.new(1, -30, 0, 0)
+    gui.CloseButton.Text = "X"
+    gui.CloseButton.TextColor3 = Color3.fromRGB(255, 0, 0)
+    gui.CloseButton.TextSize = 18
+    gui.CloseButton.BackgroundTransparency = 1
+    gui.CloseButton.MouseButton1Click:Connect(function()
+        gui.ScreenGui:Destroy()
+    end)
+    gui.CloseButton.Parent = gui.Frame
+
+    -- Initialize tabs container
+    gui.Tabs = {}
+
+    return gui
+end
+
+-- Add a tab to the window
+function GUI:AddTab(gui, tabName)
+    local tab = {}
+    
+    -- Create Tab Button
+    tab.Button = Instance.new("TextButton")
+    tab.Button.Size = UDim2.new(0, 100, 0, 30)
+    tab.Button.Position = UDim2.new(0, #gui.Tabs * 100, 0, 30)
+    tab.Button.Text = tabName
+    tab.Button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    tab.Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    tab.Button.TextSize = 16
+    tab.Button.Parent = gui.Frame
+    
+    -- Create Tab Frame
+    tab.Frame = Instance.new("Frame")
+    tab.Frame.Size = UDim2.new(1, 0, 0, 200)
+    tab.Frame.Position = UDim2.new(0, 0, 0, 60)
+    tab.Frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    tab.Frame.Visible = false
+    tab.Frame.Parent = gui.Frame
+    
+    -- Handle Tab Button Click
+    tab.Button.MouseButton1Click:Connect(function()
+        for _, t in pairs(gui.Tabs) do
+            t.Frame.Visible = false
+        end
+        tab.Frame.Visible = true
+    end)
+
+    table.insert(gui.Tabs, tab)
+    return tab
+end
+
+-- Add a button to a tab
+function GUI:AddButton(tab, buttonText, callback)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(1, -10, 0, 40)
+    button.Position = UDim2.new(0, 5, 0, #tab.Frame:GetChildren() * 45)
+    button.Text = buttonText
+    button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextSize = 16
+    button.Parent = tab.Frame
+
+    button.MouseButton1Click:Connect(function()
+        if callback then
+            callback()
+        end
+    end)
+
+    return button
+end
+
+-- Add a slider to a tab
+function GUI:AddSlider(tab, sliderName, minValue, maxValue, defaultValue, callback)
+    local slider = Instance.new("Frame")
+    slider.Size = UDim2.new(1, -10, 0, 40)
+    slider.Position = UDim2.new(0, 5, 0, #tab.Frame:GetChildren() * 45)
+    slider.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    slider.Parent = tab.Frame
+
+    local sliderLabel = Instance.new("TextLabel")
+    sliderLabel.Size = UDim2.new(0, 100, 0, 30)
+    sliderLabel.Text = sliderName
+    sliderLabel.BackgroundTransparency = 1
+    sliderLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    sliderLabel.TextSize = 14
+    sliderLabel.Parent = slider
+
+    local sliderBar = Instance.new("Frame")
+    sliderBar.Size = UDim2.new(1, -10, 0, 5)
+    sliderBar.Position = UDim2.new(0, 5, 0, 30)
+    sliderBar.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    sliderBar.Parent = slider
+
+    local sliderButton = Instance.new("TextButton")
+    sliderButton.Size = UDim2.new(0, 10, 0, 20)
+    sliderButton.Position = UDim2.new(0, (defaultValue - minValue) / (maxValue - minValue) * sliderBar.Size.X.Offset, 0, 0)
+    sliderButton.Text = ""
+    sliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    sliderButton.Parent = sliderBar
+
+    -- Update slider on drag
+    sliderButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local function updateSlider(input)
+                local newPos = math.clamp(input.Position.X - sliderBar.AbsolutePosition.X, 0, sliderBar.Size.X.Offset)
+                sliderButton.Position = UDim2.new(0, newPos, 0, 0)
+                local value = minValue + (newPos / sliderBar.Size.X.Offset) * (maxValue - minValue)
+                if callback then
+                    callback(value)
+                end
+            end
+            game:GetService("UserInputService").InputChanged:Connect(updateSlider)
+        end
+    end)
+
+    return slider
+end
+
+-- Add a toggle (checkbox) to a tab
+function GUI:AddToggle(tab, toggleName, defaultValue, callback)
+    local toggle = Instance.new("Frame")
+    toggle.Size = UDim2.new(1, -10, 0, 40)
+    toggle.Position = UDim2.new(0, 5, 0, #tab.Frame:GetChildren() * 45)
+    toggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    toggle.Parent = tab.Frame
+
+    local toggleLabel = Instance.new("TextLabel")
+    toggleLabel.Size = UDim2.new(0, 100, 0, 30)
+    toggleLabel.Text = toggleName
+    toggleLabel.BackgroundTransparency = 1
+    toggleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleLabel.TextSize = 14
+    toggleLabel.Parent = toggle
+
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Size = UDim2.new(0, 30, 0, 30)
+    toggleButton.Position = UDim2.new(1, -35, 0, 5)
+    toggleButton.Text = defaultValue and "ON" or "OFF"
+    toggleButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleButton.Parent = toggle
+
+    toggleButton.MouseButton1Click:Connect(function()
+        defaultValue = not defaultValue
+        toggleButton.Text = defaultValue and "ON" or "OFF"
+        if callback then
+            callback(defaultValue)
+        end
+    end)
+
+    return toggle
+end
+
+return GUI
